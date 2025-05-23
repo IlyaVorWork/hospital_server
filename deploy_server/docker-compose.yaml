@@ -1,0 +1,26 @@
+services:
+
+  file-server:
+    build:
+      context: ../
+      dockerfile: build/docker/service/Dockerfile
+    container_name: file-server
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - ${SERVICE_PORT}:${SERVICE_PORT}
+    depends_on:
+      - minio
+
+  minio:
+    container_name: minio
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --address ":9000" --console-address ":9001"
+    environment:
+      MINIO_STORAGE_USE_HTTPS: False
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
