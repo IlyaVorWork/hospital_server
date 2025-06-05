@@ -12,6 +12,22 @@ import (
 	_ "github.com/lib/pq"
 )
 
+func CORSMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
+}
+
 func main() {
 	err := godotenv.Load("deploy_server/.env")
 	if err != nil {
@@ -29,6 +45,7 @@ func main() {
 
 	router := gin.New()
 	router.Use(gin.Recovery())
+	router.Use(CORSMiddleware())
 
 	postgresRepo := hs.NewPostgresRepository(postgresDB)
 	service := hs.NewService(postgresRepo)
@@ -41,8 +58,8 @@ func main() {
 	router.PUT("/user/appointment", handler.MakeAppointment)
 	router.DELETE("/user/appointment", handler.CancelAppointment)
 
-	router.POST("/user/profile", handler.GetUserProfile)
-	router.POST("/user/appointments", handler.GetUserAppointments)
+	router.GET("/user/profile", handler.GetUserProfile)
+	router.GET("/user/appointments", handler.GetUserAppointments)
 
 	addr := ":" + os.Getenv("SERVICE_PORT")
 	err = router.Run(addr)

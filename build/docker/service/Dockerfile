@@ -1,4 +1,4 @@
-FROM golang:1.22.3-alpine3.18 AS build
+FROM golang:1.24.2-alpine3.20 AS build
 LABEL authors="IAV"
 WORKDIR /MinioFileService
 COPY go.mod go.sum ./

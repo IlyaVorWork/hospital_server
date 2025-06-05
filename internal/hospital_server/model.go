@@ -3,8 +3,9 @@ package hospital_server
 import "time"
 
 type Spec struct {
-	Id    int    `json:"id"`
-	Title string `json:"title"`
+	Id         int    `json:"id"`
+	Title      string `json:"title"`
+	SlotsCount *int   `json:"slots_count,omitempty"`
 }
 type Doctor struct {
 	Id         string  `json:"id"`
@@ -12,7 +13,8 @@ type Doctor struct {
 	FirstName  string  `json:"first_name"`
 	SecondName *string `json:"second_name"`
 	AvatarLink *string `json:"avatar_link"`
-	Spec       string  `json:"spec"`
+	SlotsCount *int    `json:"slots_count,omitempty"`
+	Spec       *string `json:"spec,omitempty"`
 }
 
 type User struct {
@@ -35,7 +37,7 @@ type Appointment struct {
 	Time      string    `json:"time"`
 	Cabinet   int       `json:"cabinet"`
 	Doctor    Doctor    `json:"doctor"`
-	PatientId string    `json:"patient_id"`
+	PatientId *string   `json:"patient_id"`
 }
 
 type GetSpecsOut struct {
@@ -62,10 +64,6 @@ type CancelAppointmentDTO struct {
 	Time     string    `json:"time" validate:"required"`
 	DoctorId string    `json:"doctor_id" validate:"required"`
 	UserId   string    `json:"user_id" validate:"required"`
-}
-
-type GetUserProfileDTO struct {
-	UserId string `json:"user_id" validate:"required"`
 }
 
 type GetUserProfileOut struct {

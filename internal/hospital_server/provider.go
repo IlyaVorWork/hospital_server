@@ -2,6 +2,7 @@ package hospital_server
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 )
 
@@ -19,7 +20,7 @@ func (provider *PostgresRepository) GetSpecs() ([]Spec, error) {
 
 	var specs []Spec
 
-	rows, err := provider.db.Query("SELECT id, title FROM specialization")
+	rows, err := provider.db.Query("SELECT s.id, s.title, count(a.doctor_id) AS slots_count FROM specialization s JOIN public.doctor d on s.id = d.specialization_id JOIN public.appointment a on d.id = a.doctor_id AND (a.date > CURRENT_DATE OR (a.date = CURRENT_DATE AND a.time > to_char(now(), 'HH24:MI'))) AND a.profile_id IS NULL GROUP BY s.id")
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +28,7 @@ func (provider *PostgresRepository) GetSpecs() ([]Spec, error) {
 
 	for rows.Next() {
 		var spec Spec
-		if err := rows.Scan(&spec.Id, &spec.Title); err != nil {
+		if err := rows.Scan(&spec.Id, &spec.Title, &spec.SlotsCount); err != nil {
 			return nil, err
 		}
 		specs = append(specs, spec)
@@ -40,7 +41,12 @@ func (provider *PostgresRepository) GetDoctors(specId string) ([]Doctor, error) 
 
 	var doctors []Doctor
 
-	rows, err := provider.db.Query("SELECT d.id, d.last_name, d.first_name, d.second_name, d.avatar_link, s.title FROM doctor d JOIN specialization s ON s.id = d.specialization_id WHERE d.specialization_id = $1", specId)
+	_, err := provider.db.Exec("SET TIMEZONE = 'Asia/Novosibirsk'")
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := provider.db.Query("SELECT d.id, d.last_name, d.first_name, d.second_name, d.avatar_link, COUNT(a.doctor_id) as slots_count FROM doctor d LEFT JOIN appointment a ON a.doctor_id = d.id AND (a.date > CURRENT_DATE OR (a.date = CURRENT_DATE AND a.time > to_char(CURRENT_TIMESTAMP, 'HH24:MI'))) AND a.profile_id IS NULL WHERE d.specialization_id = $1 GROUP BY d.id, d.last_name, d.first_name, d.second_name, d.avatar_link", specId)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +54,7 @@ func (provider *PostgresRepository) GetDoctors(specId string) ([]Doctor, error) 
 
 	for rows.Next() {
 		var doctor Doctor
-		if err := rows.Scan(&doctor.Id, &doctor.LastName, &doctor.FirstName, &doctor.SecondName, &doctor.AvatarLink, &doctor.Spec); err != nil {
+		if err := rows.Scan(&doctor.Id, &doctor.LastName, &doctor.FirstName, &doctor.SecondName, &doctor.AvatarLink, &doctor.SlotsCount); err != nil {
 			return nil, err
 		}
 		doctors = append(doctors, doctor)
@@ -62,22 +68,28 @@ func (provider *PostgresRepository) GetSlots(doctorId string) ([]Appointment, er
 	var doctor Doctor
 	var slots []Appointment
 
-	err := provider.db.QueryRow("SELECT d.id, d.last_name, d.first_name, d.second_name, d.avatar_link, s.title FROM doctor d JOIN specialization s ON s.id = d.specialization_id WHERE d.id = $1", doctorId).Scan(&doctor.Id, &doctor.LastName, &doctor.FirstName, &doctor.SecondName, &doctor.AvatarLink, &doctor.Spec)
+	_, err := provider.db.Exec("SET TIMEZONE = 'Asia/Novosibirsk'")
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := provider.db.Query("SELECT a.date, a.time, c.number, a.profile_id FROM appointment a JOIN cabinet c ON c.id = a.cabinet_id WHERE a.doctor_id = $1", doctorId)
+	err = provider.db.QueryRow("SELECT d.id, d.last_name, d.first_name, d.second_name, d.avatar_link FROM doctor d JOIN specialization s ON s.id = d.specialization_id WHERE d.id = $1", doctorId).Scan(&doctor.Id, &doctor.LastName, &doctor.FirstName, &doctor.SecondName, &doctor.AvatarLink)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := provider.db.Query("SELECT a.date, a.time, c.number, a.profile_id FROM appointment a JOIN cabinet c ON c.id = a.cabinet_id WHERE a.doctor_id = $1 AND a.profile_id IS NULL AND (a.date > CURRENT_DATE OR (a.date = CURRENT_DATE AND a.time > to_char(CURRENT_TIMESTAMP, 'HH24:MI')))", doctorId)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-
+	fmt.Println("АБОБА 3")
 	for rows.Next() {
 		var slot Appointment
 		if err := rows.Scan(&slot.Date, &slot.Time, &slot.Cabinet, &slot.PatientId); err != nil {
 			return nil, err
 		}
+		fmt.Println(slot)
 		slot.Doctor = doctor
 		slots = append(slots, slot)
 	}
@@ -109,7 +121,7 @@ func (provider *PostgresRepository) GetUserProfile(userId string) (*User, error)
 
 	var profile User
 
-	err := provider.db.QueryRow("SELECT id, phone, last_name, first_name, second_name, gender, birth_date, passport_series, passport_number, passport_issuer, passport_issue_date, snils FROM profile WHERE id = $1", userId).Scan(&profile.Id, &profile.LastName, &profile.FirstName, &profile.SecondName, &profile.Gender, &profile.BirthDate, &profile.PassportSeries, &profile.PassportNumber, &profile.PassportIssuer, &profile.PassportIssueDate, &profile.Snils)
+	err := provider.db.QueryRow("SELECT id, phone, last_name, first_name, second_name, gender, birth_date, passport_series, passport_number, passport_issuer, passport_issue_date, snils FROM profile WHERE id = $1", userId).Scan(&profile.Id, &profile.Phone, &profile.LastName, &profile.FirstName, &profile.SecondName, &profile.Gender, &profile.BirthDate, &profile.PassportSeries, &profile.PassportNumber, &profile.PassportIssuer, &profile.PassportIssueDate, &profile.Snils)
 	if err != nil {
 		return nil, err
 	}

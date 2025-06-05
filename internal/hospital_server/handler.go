@@ -2,6 +2,7 @@ package hospital_server
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"time"
@@ -45,7 +46,7 @@ func (handler *Handler) GetSpecs(c *gin.Context) {
 
 func (handler *Handler) GetDoctors(c *gin.Context) {
 
-	specId := c.Param("specId")
+	specId := c.Query("specId")
 	if specId == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid specId"})
 		return
@@ -65,13 +66,16 @@ func (handler *Handler) GetDoctors(c *gin.Context) {
 
 func (handler *Handler) GetSlots(c *gin.Context) {
 
-	doctorId := c.Param("doctorId")
+	doctorId := c.Param("id")
 	if doctorId == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid doctorId"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid doctor id"})
 		return
 	}
 
+	fmt.Println("АБОБА 1")
+
 	slots, err := handler.service.GetSlots(doctorId)
+	fmt.Println(slots[0], "АБОБА 2")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -119,13 +123,13 @@ func (handler *Handler) CancelAppointment(c *gin.Context) {
 
 func (handler *Handler) GetUserProfile(c *gin.Context) {
 
-	var dto GetUserProfileDTO
-	if err := json.NewDecoder(c.Request.Body).Decode(&dto); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	userId := c.Query("userId")
+	if userId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
 		return
 	}
 
-	profile, err := handler.service.GetUserProfile(dto.UserId)
+	profile, err := handler.service.GetUserProfile(userId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -139,13 +143,13 @@ func (handler *Handler) GetUserProfile(c *gin.Context) {
 
 func (handler *Handler) GetUserAppointments(c *gin.Context) {
 
-	var dto GetUserProfileDTO
-	if err := json.NewDecoder(c.Request.Body).Decode(&dto); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	userId := c.Query("userId")
+	if userId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
 		return
 	}
 
-	appointments, err := handler.service.GetUserAppointments(dto.UserId)
+	appointments, err := handler.service.GetUserAppointments(userId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
