@@ -45,7 +45,7 @@ create table public.profile
     id                  uuid    not null
         constraint profile_pk
             primary key,
-    phone               integer not null,
+    phone               varchar not null,
     last_name           varchar not null,
     first_name          varchar not null,
     second_name         varchar,
